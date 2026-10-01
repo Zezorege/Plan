@@ -44,6 +44,12 @@ label{font-size:.85rem;color:var(--mute);display:block;margin:10px 0 4px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .total{text-align:center;font-weight:600;padding:8px}
 .link{background:none;border:0;color:var(--mute);font:inherit;text-decoration:underline;cursor:pointer;padding:4px}
+.ex{display:grid;grid-template-columns:1fr 46px 46px 58px 28px;gap:6px;align-items:center;margin-bottom:6px}
+.ex input{padding:8px 4px;text-align:center}
+.ex input.n{text-align:left;padding-left:8px}
+.exh{font-size:.75rem;color:var(--mute);text-align:center;margin-bottom:4px}
+.exh span:first-child{text-align:left;padding-left:8px}
+.xbtn{border:0;background:transparent;color:var(--mute);font-size:1.1rem;cursor:pointer;padding:0}
 :focus-visible{outline:3px solid var(--water);outline-offset:2px}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
@@ -83,6 +89,12 @@ label{font-size:.85rem;color:var(--mute);display:block;margin:10px 0 4px}
         <select id="gType"><option value="">Escolher…</option><option>Peito e tríceps</option><option>Costas e bíceps</option><option>Pernas</option><option>Ombros</option><option>Full body</option><option>Cardio</option><option>Outro</option></select></div>
       <div><label for="gMin">Duração (min)</label><input id="gMin" type="number" min="0" step="5"></div>
     </div>
+    <label>Exercícios</label>
+    <div class="ex exh"><span>Exercício</span><span>Séries</span><span>Reps</span><span>Peso (kg)</span><span></span></div>
+    <div id="exList"></div>
+    <datalist id="exNames"></datalist>
+    <div class="row" style="margin-top:6px"><button class="btn" id="exAdd">+ Exercício</button><button class="btn" id="exCopy">Copiar último treino</button></div>
+    <p class="sub" id="exVol" style="margin:10px 0 0"></p>
   </section>
 
   <section class="card">
@@ -108,7 +120,7 @@ const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}};
 const $=id=>document.getElementById(id);
 const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
 let cur=new Date();cur.setHours(12,0,0,0);
-const get=k=>S.days[k]||(S.days[k]={water:0,gym:false,type:'',min:0,pages:0,book:''});
+const get=k=>S.days[k]||(S.days[k]={water:0,gym:false,type:'',min:0,pages:0,book:'',ex:[]});
 const peek=k=>S.days[k]||{water:0,gym:false,pages:0};
 const score=d=>(d.water>=S.goals.water?1:0)+(d.gym?1:0)+(d.pages>=S.goals.pages?1:0);
 const pct=(a,b)=>Math.min(100,Math.round(a/b*100));
@@ -133,7 +145,7 @@ function render(){
   $('gTog').classList.toggle('on',d.gym);
   $('gTog').querySelector('.chk').textContent=d.gym?'✓':'';
   $('gTxt').textContent=d.gym?'Feito':'Pendente';
-  $('gType').value=d.type;$('gMin').value=d.min||'';
+  $('gType').value=d.type;$('gMin').value=d.min||'';renderEx();
   // leitura
   $('rTxt').textContent=d.pages+' / '+S.goals.pages+' págs';
   $('rBar').style.width=pct(d.pages,S.goals.pages)+'%';
@@ -141,6 +153,33 @@ function render(){
   const sc=score(d);
   $('total').textContent=sc===3?'🎉 Todas as metas de hoje concluídas!':sc+' de 3 metas concluídas';
 }
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const exs=d=>d.ex||(d.ex=[]);
+function vol(){const l=exs(get(iso(cur)));const v=l.reduce((a,e)=>a+(e.s||0)*(e.r||0)*(e.w||0),0);
+  $('exVol').textContent=l.length?'Volume total: '+Math.round(v).toLocaleString('pt-BR')+' kg (séries × reps × peso)':'Nenhum exercício registrado neste dia.';}
+function renderEx(){
+  const l=exs(get(iso(cur)));
+  $('exList').innerHTML=l.map((e,i)=>'<div class="ex" data-i="'+i+'"><input class="n" list="exNames" placeholder="Ex.: Supino reto" value="'+esc(e.n)+'" data-f="n" aria-label="Exercício">'
+    +'<input type="number" inputmode="numeric" min="0" value="'+(e.s||'')+'" data-f="s" aria-label="Séries">'
+    +'<input type="number" inputmode="numeric" min="0" value="'+(e.r||'')+'" data-f="r" aria-label="Repetições">'
+    +'<input type="number" inputmode="decimal" min="0" step="0.5" value="'+(e.w||'')+'" data-f="w" aria-label="Peso em kg">'
+    +'<button class="xbtn" data-del="'+i+'" aria-label="Remover exercício">✕</button></div>').join('');
+  const names=new Set();Object.values(S.days).forEach(d=>(d.ex||[]).forEach(e=>e.n&&names.add(e.n)));
+  $('exNames').innerHTML=[...names].map(n=>'<option value="'+esc(n)+'">').join('');
+  vol();
+}
+$('exList').addEventListener('input',ev=>{const t=ev.target,row=t.closest('.ex');if(!row||!t.dataset.f)return;
+  const f=t.dataset.f,x=exs(get(iso(cur)))[+row.dataset.i];x[f]=f==='n'?t.value.trim():Math.max(0,+t.value||0);save();vol();});
+$('exList').addEventListener('click',ev=>{const b=ev.target.closest('[data-del]');if(!b)return;
+  exs(get(iso(cur))).splice(+b.dataset.del,1);save();renderEx();});
+$('exAdd').onclick=()=>{exs(get(iso(cur))).push({n:'',s:3,r:10,w:0});save();renderEx();
+  const ns=$('exList').querySelectorAll('.n');ns[ns.length-1].focus();};
+$('exCopy').onclick=()=>{const k=iso(cur);
+  const prev=Object.keys(S.days).filter(x=>x<k&&(S.days[x].ex||[]).length).sort().pop();
+  if(!prev){alert('Nenhum treino anterior com exercícios encontrado.');return;}
+  const d=get(k);exs(d).push(...S.days[prev].ex.map(e=>({...e})));
+  if(!d.type&&S.days[prev].type)d.type=S.days[prev].type;
+  save();render();};
 const upd=fn=>{fn(get(iso(cur)));save();render()};
 document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>upd(d=>d.water=Math.max(0,d.water+ +b.dataset.w)));
 $('gTog').onclick=()=>upd(d=>d.gym=!d.gym);
