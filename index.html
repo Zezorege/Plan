@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planner diário</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EDF2F4;--card:#FFFFFF;--ink:#14232B;--mute:#5F727C;--line:#D5DEE3;--water:#2F7FD1;--gym:#E0A21B;--read:#6B5BD2;--ok:#1F9D6B;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1A20;--card:#16262E;--ink:#E8F0F3;--mute:#8FA3AD;--line:#27404B;--water:#5AA3EE;--gym:#F0B93E;--read:#948AEE;--ok:#3CC490}}
+:root[data-theme="dark"]{--bg:#0E1A20;--card:#16262E;--ink:#E8F0F3;--mute:#8FA3AD;--line:#27404B;--water:#5AA3EE;--gym:#F0B93E;--read:#948AEE;--ok:#3CC490}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.45}
+main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+h1{font-size:1.5rem;font-weight:800;margin:0;text-transform:capitalize}
+.nav button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:1.1rem;cursor:pointer}
+.sub{color:var(--mute);margin:0 0 16px}
+.week{display:flex;gap:6px;margin-bottom:16px}
+.day{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 0;text-align:center;cursor:pointer;font:inherit;color:var(--ink)}
+.day small{display:block;color:var(--mute);font-size:.7rem}
+.day b{font-size:.95rem}
+.day.sel{border:2px solid var(--ink)}
+.dots{display:flex;justify-content:center;gap:3px;margin-top:4px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--ok)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.card h2{margin:0;font-size:1.1rem;display:flex;justify-content:space-between;align-items:baseline}
+.card h2 span{font-size:.9rem;color:var(--mute);font-weight:400}
+.bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin:12px 0}
+.bar div{height:100%;width:0;border-radius:6px;transition:width .3s}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:70px;padding:10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.btn:active{transform:scale(.97)}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%;min-width:0}
+label{font-size:.85rem;color:var(--mute);display:block;margin:10px 0 4px}
+.toggle{display:flex;align-items:center;gap:10px;width:100%;padding:12px;border-radius:12px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;margin-top:12px}
+.toggle.on{border-color:var(--gym);background:color-mix(in srgb,var(--gym) 18%,transparent)}
+.chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--mute);display:grid;place-items:center;font-size:.8rem}
+.toggle.on .chk{background:var(--gym);border-color:var(--gym);color:#14232B}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.total{text-align:center;font-weight:600;padding:8px}
+.link{background:none;border:0;color:var(--mute);font:inherit;text-decoration:underline;cursor:pointer;padding:4px}
+:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Planner">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title"></h1>
+    <div class="nav"><button id="prev" aria-label="Dia anterior">‹</button> <button id="next" aria-label="Próximo dia">›</button></div>
+  </header>
+  <p class="sub" id="sub"></p>
+  <div class="week" id="week"></div>
+
+  <section class="card">
+    <h2>Água <span id="wTxt"></span></h2>
+    <div class="bar"><div id="wBar" style="background:var(--water)"></div></div>
+    <div class="row">
+      <button class="btn" data-w="200">+200 ml</button>
+      <button class="btn" data-w="300">+300 ml</button>
+      <button class="btn" data-w="500">+500 ml</button>
+      <button class="btn" data-w="-200">−200 ml</button>
+    </div>
+    <label for="wGoal">Meta diária (ml)</label>
+    <input id="wGoal" type="number" min="500" step="100">
+  </section>
+
+  <section class="card">
+    <h2>Academia <span id="gTxt"></span></h2>
+    <button class="toggle" id="gTog"><span class="chk"></span><span id="gLbl">Treinei hoje</span></button>
+    <div class="grid2">
+      <div><label for="gType">Treino</label>
+        <select id="gType"><option value="">Escolher…</option><option>Peito e tríceps</option><option>Costas e bíceps</option><option>Pernas</option><option>Ombros</option><option>Full body</option><option>Cardio</option><option>Outro</option></select></div>
+      <div><label for="gMin">Duração (min)</label><input id="gMin" type="number" min="0" step="5"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Leitura <span id="rTxt"></span></h2>
+    <div class="bar"><div id="rBar" style="background:var(--read)"></div></div>
+    <div class="grid2">
+      <div><label for="rPages">Páginas lidas</label><input id="rPages" type="number" min="0"></div>
+      <div><label for="rGoal">Meta (páginas)</label><input id="rGoal" type="number" min="1"></div>
+    </div>
+    <label for="rBook">Livro atual</label>
+    <input id="rBook" type="text" placeholder="Título do livro">
+  </section>
+
+  <div class="card total" id="total"></div>
+  <div style="text-align:center"><button class="link" id="reset">Apagar todos os dados</button></div>
+</main>
+
+<script>
+const KEY='planner-diario-v1';
+let S={goals:{water:2500,pages:20},days:{}};
+try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}};
+const $=id=>document.getElementById(id);
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
+let cur=new Date();cur.setHours(12,0,0,0);
+const get=k=>S.days[k]||(S.days[k]={water:0,gym:false,type:'',min:0,pages:0,book:''});
+const peek=k=>S.days[k]||{water:0,gym:false,pages:0};
+const score=d=>(d.water>=S.goals.water?1:0)+(d.gym?1:0)+(d.pages>=S.goals.pages?1:0);
+const pct=(a,b)=>Math.min(100,Math.round(a/b*100));
+
+function render(){
+  const k=iso(cur),d=get(k);
+  $('title').textContent=cur.toLocaleDateString('pt-BR',{weekday:'long'});
+  $('sub').textContent=cur.toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
+  // semana
+  const w=$('week');w.innerHTML='';
+  for(let i=-3;i<=3;i++){
+    const x=new Date(cur);x.setDate(x.getDate()+i);const xk=iso(x),sc=score(peek(xk));
+    const b=document.createElement('button');b.className='day'+(i===0?' sel':'');
+    b.innerHTML='<small>'+x.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','')+'</small><b>'+x.getDate()+'</b><div class="dots">'+[0,1,2].map(n=>'<i class="'+(n<sc?'on':'')+'"></i>').join('')+'</div>';
+    b.onclick=()=>{cur=x;render()};w.appendChild(b);
+  }
+  // água
+  $('wTxt').textContent=d.water+' / '+S.goals.water+' ml';
+  $('wBar').style.width=pct(d.water,S.goals.water)+'%';
+  $('wGoal').value=S.goals.water;
+  // academia
+  $('gTog').classList.toggle('on',d.gym);
+  $('gTog').querySelector('.chk').textContent=d.gym?'✓':'';
+  $('gTxt').textContent=d.gym?'Feito':'Pendente';
+  $('gType').value=d.type;$('gMin').value=d.min||'';
+  // leitura
+  $('rTxt').textContent=d.pages+' / '+S.goals.pages+' págs';
+  $('rBar').style.width=pct(d.pages,S.goals.pages)+'%';
+  $('rPages').value=d.pages||'';$('rGoal').value=S.goals.pages;$('rBook').value=d.book;
+  const sc=score(d);
+  $('total').textContent=sc===3?'🎉 Todas as metas de hoje concluídas!':sc+' de 3 metas concluídas';
+}
+const upd=fn=>{fn(get(iso(cur)));save();render()};
+document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>upd(d=>d.water=Math.max(0,d.water+ +b.dataset.w)));
+$('gTog').onclick=()=>upd(d=>d.gym=!d.gym);
+$('gType').onchange=e=>upd(d=>d.type=e.target.value);
+$('gMin').onchange=e=>upd(d=>d.min=Math.max(0,+e.target.value||0));
+$('rPages').onchange=e=>upd(d=>d.pages=Math.max(0,+e.target.value||0));
+$('rBook').onchange=e=>upd(d=>d.book=e.target.value);
+$('wGoal').onchange=e=>{S.goals.water=Math.max(500,+e.target.value||2500);save();render()};
+$('rGoal').onchange=e=>{S.goals.pages=Math.max(1,+e.target.value||20);save();render()};
+$('prev').onclick=()=>{cur.setDate(cur.getDate()-1);render()};
+$('next').onclick=()=>{cur.setDate(cur.getDate()+1);render()};
+$('reset').onclick=()=>{if(confirm('Apagar todos os dados do planner?')){S={goals:S.goals,days:{}};save();render()}};
+render();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+</script>
+</body>
+</html>
